@@ -89,22 +89,56 @@ service cloud.firestore {
     }
     
     function hasValidGameUpdateData(game) {
-      let before = game.data;
-      let after = request.resource.data;
-      
-      // Immutable fields that can never be changed
-      let areCoreFieldsImmutable = before.player1Id == after.player1Id && before.createdAt == after.createdAt;
-      
-      // Player 2 joining a waiting game
-      let isJoining = before.status == 'waiting' && after.status == 'active'
-        && before.player2Id == null && after.player2Id == request.auth.uid
-        && request.auth.uid != before.player1Id;
+        let before = game.data;
+        let after = request.resource.data;
 
-      // A player making a move
-      let isMakingMove = isNextPlayer(game) && before.status == 'active' && after.status != 'waiting'
-        && before.board != after.board;
+        // --- Immutable Fields ---
+        // These fields must never change after creation.
+        let areCoreFieldsImmutable = before.player1Id == after.player1Id &&
+                                    before.createdAt == after.createdAt;
+        if (!areCoreFieldsImmutable) {
+          return false;
+        }
 
-      return areCoreFieldsImmutable && (isJoining || isMakingMove);
+        // --- State: Player 2 Joining a Game ---
+        let isJoining = before.status == 'waiting' &&
+                        after.status == 'active' &&
+                        before.player2Id == null &&
+                        after.player2Id == request.auth.uid &&
+                        request.auth.uid != before.player1Id &&
+                        // When joining, only player2Id and status should change.
+                        after.board == before.board &&
+                        after.nextPlayer == before.nextPlayer &&
+                        after.winner == before.winner;
+        if (isJoining) {
+          return true;
+        }
+
+        // --- State: Player Making a Move ---
+        let isMakingMove = isNextPlayer(game) &&
+                           before.status == 'active' &&
+                           after.status != 'waiting' &&
+                           before.board != after.board &&
+                           // When making a move, player2Id cannot be changed.
+                           before.player2Id == after.player2Id;
+        if (isMakingMove) {
+          return true;
+        }
+        
+        // --- State: Player Forfeiting ---
+        let isForfeiting = isGamePlayer(game) &&
+                            before.status == 'active' &&
+                            after.status == 'finished' &&
+                            // The winner must be the other player
+                            after.winner != request.auth.uid &&
+                            after.winner != 'draw' &&
+                            after.winner != null;
+
+        if (isForfeiting) {
+          return true;
+        }
+
+        return false;
     }
 
 
