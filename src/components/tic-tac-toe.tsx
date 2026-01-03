@@ -96,6 +96,7 @@ const Cell = ({ value, onClick, isWinning, index }: { value: Player | null, onCl
 export default function TicTacToeGame() {
     const [board, setBoard] = useState<Board>(Array(9).fill(null));
     const [isXNext, setIsXNext] = useState(true);
+    const [lastWinner, setLastWinner] = useState<Player | null>(null);
     const [scores, setScores] = useState({ X: 0, O: 0 });
     const [playerNames, setPlayerNames] = useState({ X: "Player X", O: "Player O" });
     const [gameMode, setGameMode] = useState<GameMode>('pvp');
@@ -107,9 +108,13 @@ export default function TicTacToeGame() {
 
     function handleRestart(newRound = false) {
         setBoard(Array(9).fill(null));
-        setIsXNext(true);
-        if(!newRound) {
+        if (newRound) {
+            // Winner starts the next round. If draw, alternate.
+            setIsXNext(lastWinner ? lastWinner === 'X' : !isXNext);
+        } else {
+            setIsXNext(true);
             setScores({X: 0, O: 0});
+            setLastWinner(null);
         }
     }
     
@@ -130,6 +135,7 @@ export default function TicTacToeGame() {
 
     useEffect(() => {
         if (winner) {
+            setLastWinner(winner);
             setScores(prevScores => ({
                 ...prevScores,
                 [winner]: prevScores[winner] + 1
@@ -145,9 +151,15 @@ export default function TicTacToeGame() {
 
             return () => clearTimeout(timer);
         } else if (isDraw) {
+            setLastWinner(null); // No winner in a draw
             if (gameMode === 'pvp') {
                 saveGameRecord();
             }
+             const timer = setTimeout(() => {
+                handleRestart(true);
+            }, 2000);
+
+            return () => clearTimeout(timer);
         }
     }, [winner, isDraw]);
     
@@ -156,7 +168,10 @@ export default function TicTacToeGame() {
             const timer = setTimeout(() => {
                 const bestMove = findBestMove(board);
                 if (bestMove !== -1) {
-                    handleCellClick(bestMove);
+                    const nextBoard = board.slice();
+                    nextBoard[bestMove] = 'O';
+                    setBoard(nextBoard);
+                    setIsXNext(true);
                 }
             }, 500);
             return () => clearTimeout(timer);
@@ -168,9 +183,8 @@ export default function TicTacToeGame() {
             return;
         }
 
-        // Prevent player from clicking during computer's turn
         if (gameMode === 'pvc' && !isXNext) {
-            return;
+            return; // Prevent player from moving on computer's turn
         }
 
         const nextBoard = board.slice();
