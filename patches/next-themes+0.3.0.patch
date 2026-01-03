@@ -1,14 +1,47 @@
 diff --git a/node_modules/next-themes/package.json b/node_modules/next-themes/package.json
-index 5a3574c..2122650 100644
+index 51582dd..74f6381 100644
 --- a/node_modules/next-themes/package.json
 +++ b/node_modules/next-themes/package.json
-@@ -63,7 +63,7 @@
+@@ -48,7 +48,7 @@
+     "next": ">=10"
+   },
    "peerDependencies": {
-     "next": ">=9",
 -    "react": "^16.8 || ^17 || ^18",
--    "react-dom": "^16.8 || ^17 || ^18"
 +    "react": "^16.8 || ^17 || ^18 || ^19",
-+    "react-dom": "^16.8 || ^17 || ^18 || ^19"
+     "react-dom": "^16.8 || ^17 || ^18"
    },
    "peerDependenciesMeta": {
-     "next": {
+diff --git a/node_modules/next-themes/dist/index.js b/node_modules/next-themes/dist/index.js
+index 9b7c8f0..7b5c1a7 100644
+--- a/node_modules/next-themes/dist/index.js
++++ b/node_modules/next-themes/dist/index.js
+@@ -10,7 +10,7 @@
+     enableSystem = true, forcedTheme, storageKey = 'theme', themes = ['light', 'dark'], attribute = 'data-theme', value, children, nonce } = _props;
+     const [theme, setThemeState] = React.useState(()=>getTheme(storageKey, defaultTheme));
+     const [resolvedTheme, setResolvedTheme] = React.useState(()=>getTheme(storageKey));
+-    const attrs = !value ? themes : Object.values(value);
++    const attrs = !value ? themes : Object.values(value).flat();
+     const applyTheme = React.useCallback((theme)=>{
+         let resolved = theme;
+         if (!resolved) return;
+diff --git a/node_modules/next-themes/dist/types.d.ts b/node_modules/next-themes/dist/types.d.ts
+index b31c6a6..4c15324 100644
+--- a/node_modules/next-themes/dist/types.d.ts
++++ b/node_modules/next-themes/dist/types.d.ts
+@@ -1,6 +1,6 @@
+ import React from 'react';
+ export interface UseThemeProps {
+-    /** List of all available theme names. */
++    /** List of all available theme names. */ 
+     themes: string[];
+     /** Forced theme name for the current page. */
+     forcedTheme?: string;
+@@ -21,7 +21,7 @@
+     /** HTML attribute modified with the theme name. */
+     attribute?: string | 'class';
+     /** Mapping of theme name to HTML attribute value. Explicitly setting this overrides `attribute`. */
+-    value?: {
++    value?: { 
+         [themeName: string]: string;
+     };
+     /** Nonce string to pass to the inline script for CSP. */

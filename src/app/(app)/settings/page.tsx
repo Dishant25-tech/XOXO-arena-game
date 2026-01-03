@@ -1,22 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SettingsPage() {
-  const { setTheme, theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null; // or a loading skeleton
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,23 +12,10 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Theme</CardTitle>
-          <CardDescription>Select a theme for the application.</CardDescription>
+          <CardDescription>Theme selection is currently disabled.</CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={theme} onValueChange={setTheme}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="light" id="light" />
-              <Label htmlFor="light">Light</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="dark" id="dark" />
-              <Label htmlFor="dark">Dark</Label>
-            </div>
-             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="system" id="system" />
-              <Label htmlFor="system">System</Label>
-            </div>
-          </RadioGroup>
+          <p>The ability to switch themes has been temporarily removed to resolve a build issue.</p>
         </CardContent>
       </Card>
     </div>
