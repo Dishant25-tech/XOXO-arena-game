@@ -58,12 +58,26 @@ export default function TicTacToeGame() {
     const { winner, line: winningLine } = useMemo(() => calculateWinner(board), [board]);
     const isDraw = !winner && board.every(Boolean);
 
+    function handleRestart(newRound = false) {
+        setBoard(Array(9).fill(null));
+        setIsXNext(true);
+        if(!newRound) {
+            setScores({X: 0, O: 0});
+        }
+    }
+
     useEffect(() => {
         if (winner) {
             setScores(prevScores => ({
                 ...prevScores,
                 [winner]: prevScores[winner] + 1
             }));
+            
+            const timer = setTimeout(() => {
+                handleRestart(true);
+            }, 2000);
+
+            return () => clearTimeout(timer);
         }
     }, [winner]);
 
@@ -77,14 +91,6 @@ export default function TicTacToeGame() {
         setIsXNext(!isXNext);
     }
     
-    function handleRestart(newRound = false) {
-        setBoard(Array(9).fill(null));
-        setIsXNext(true);
-        if(!newRound) {
-            setScores({X: 0, O: 0});
-        }
-    }
-
     function handleNameChange(player: Player, name: string) {
         setPlayerNames(prevNames => ({
             ...prevNames,
@@ -161,7 +167,7 @@ export default function TicTacToeGame() {
                     </div>
                 </div>
             </CardContent>
-            {(winner || isDraw) && (
+            {(winner || isDraw) && !winner && (
                 <CardFooter>
                     <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
                 </CardFooter>
