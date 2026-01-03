@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { X, Circle, RefreshCw, User, Bot } from 'lucide-react';
+import { X, Circle, RefreshCw, User, Bot, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,16 @@ import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection } from 'firebase/firestore';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type Player = 'X' | 'O';
 type Board = (Player | null)[];
@@ -99,7 +108,8 @@ export default function TicTacToeGame() {
     const [lastWinner, setLastWinner] = useState<Player | null>(null);
     const [scores, setScores] = useState({ X: 0, O: 0 });
     const [playerNames, setPlayerNames] = useState({ X: "Player X", O: "Player O" });
-    const [gameMode, setGameMode] = useState<GameMode>('pvp');
+    const [gameMode, setGameMode] = useState<GameMode>('pvp' | 'pvc');
+    const [seriesWinner, setSeriesWinner] = useState<Player | null>(null);
     const { user } = useUser();
     const firestore = useFirestore();
 
@@ -137,6 +147,14 @@ export default function TicTacToeGame() {
         const gameRecordsRef = collection(firestore, `users/${user.uid}/game_records`);
         addDocumentNonBlocking(gameRecordsRef, gameRecord);
     }
+    
+    useEffect(() => {
+        if (scores.X === 5) {
+            setSeriesWinner('X');
+        } else if (scores.O === 5) {
+            setSeriesWinner('O');
+        }
+    }, [scores]);
 
     useEffect(() => {
         if (winner) {
@@ -151,7 +169,9 @@ export default function TicTacToeGame() {
             }
 
             const timer = setTimeout(() => {
-                handleRestart(true);
+                if (scores.X < 5 && scores.O < 5) {
+                    handleRestart(true);
+                }
             }, 2000);
 
             return () => clearTimeout(timer);
@@ -161,7 +181,9 @@ export default function TicTacToeGame() {
                 saveGameRecord();
             }
              const timer = setTimeout(() => {
-                handleRestart(true);
+                 if (scores.X < 5 && scores.O < 5) {
+                    handleRestart(true);
+                 }
             }, 2000);
 
             return () => clearTimeout(timer);
@@ -184,7 +206,7 @@ export default function TicTacToeGame() {
     }, [isXNext, board, gameMode, winner, isDraw]);
 
     function handleCellClick(i: number) {
-        if (board[i] || winner) {
+        if (board[i] || winner || seriesWinner) {
             return;
         }
 
@@ -214,6 +236,12 @@ export default function TicTacToeGame() {
             setPlayerNames({ X: "Player X", O: "Player O" });
         }
     }
+    
+    const closeSeriesWinnerDialog = () => {
+        setSeriesWinner(null);
+        handleRestart(false);
+    }
+
 
     let status;
     if (winner) {
@@ -233,81 +261,105 @@ export default function TicTacToeGame() {
     );
 
     return (
-        <Card className="w-full max-w-md shadow-2xl shadow-primary/10 border-primary/20">
-            <CardHeader className="text-center pb-2">
-                <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Tic Tac Toe Duel</CardTitle>
-                <div className="flex justify-center pt-4">
-                     <Tabs value={gameMode} onValueChange={handleModeChange} className="w-[400px]">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="pvp"><User className="mr-2"/> Player vs Player</TabsTrigger>
-                            <TabsTrigger value="pvc"><Bot className="mr-2"/> Player vs Computer</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
-                 <div className="flex justify-center pt-4">
-                    <Button onClick={() => handleRestart()} variant="outline" size="sm">
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        New Game
-                    </Button>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="flex justify-between items-center mb-4 px-2">
-                    <div className="flex items-center gap-2">
-                        <X className="h-5 w-5 text-primary" strokeWidth={3} />
-                         <Input 
-                            className="w-32 h-8"
-                            value={playerNames.X} 
-                            onChange={(e) => handleNameChange('X', e.target.value)}
-                            disabled={gameMode === 'pvc'}
-                         />
+        <>
+            <AlertDialog open={!!seriesWinner} onOpenChange={(open) => !open && closeSeriesWinnerDialog()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <div className="flex justify-center items-center h-16">
+                        <PartyPopper className="w-12 h-12 text-yellow-400" />
                     </div>
-                     <div className="flex items-center gap-2">
-                        <Input 
-                            className="w-32 h-8 text-right"
-                            value={playerNames.O}
-                            onChange={(e) => handleNameChange('O', e.target.value)}
-                            disabled={gameMode === 'pvc'}
-                        />
-                        <Circle className="h-5 w-5 text-destructive" strokeWidth={3} />
+                    <AlertDialogTitle className="text-center text-2xl">
+                        {seriesWinner ? `${playerNames[seriesWinner]} wins the series!` : ''}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-center">
+                        Congratulations! A new series will begin.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogAction onClick={closeSeriesWinnerDialog}>
+                        Play Again
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <Card className="w-full max-w-md shadow-2xl shadow-primary/10 border-primary/20">
+                <CardHeader className="text-center pb-2">
+                    <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Tic Tac Toe Duel</CardTitle>
+                    <div className="flex justify-center pt-4">
+                        <Tabs value={gameMode} onValueChange={handleModeChange} className="w-[400px]">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="pvp"><User className="mr-2"/> Player vs Player</TabsTrigger>
+                                <TabsTrigger value="pvc"><Bot className="mr-2"/> Player vs Computer</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
-                </div>
-                 <div className="flex justify-between items-center mb-4 px-2 text-2xl font-bold">
-                    <div className="text-primary">{scores.X}</div>
-                    <div className="text-sm font-medium text-muted-foreground">Score</div>
-                    <div className="text-destructive">{scores.O}</div>
-                </div>
-                <CardDescription className="pt-2 text-lg">
-                    <div className="flex h-8 items-center justify-center gap-2">
-                        <span>{status}</span>
-                        {!winner && !isDraw && <div className="animate-pulse">{currentPlayerIcon}</div>}
+                    <div className="flex justify-center pt-4">
+                        <Button onClick={() => handleRestart()} variant="outline" size="sm">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            New Game
+                        </Button>
                     </div>
-                </CardDescription>
-
-                <div className="flex justify-center pt-4">
-                    <div className="grid grid-cols-3 rounded-lg overflow-hidden border">
-                        {board.map((value, i) => (
-                            <Cell
-                                key={i}
-                                index={i}
-                                value={value}
-                                onClick={() => handleCellClick(i)}
-                                isWinning={winningLine?.includes(i) ?? false}
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-between items-center mb-4 px-2">
+                        <div className="flex items-center gap-2">
+                            <X className="h-5 w-5 text-primary" strokeWidth={3} />
+                            <Input 
+                                className="w-32 h-8"
+                                value={playerNames.X} 
+                                onChange={(e) => handleNameChange('X', e.target.value)}
+                                disabled={gameMode === 'pvc'}
                             />
-                        ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Input 
+                                className="w-32 h-8 text-right"
+                                value={playerNames.O}
+                                onChange={(e) => handleNameChange('O', e.target.value)}
+                                disabled={gameMode === 'pvc'}
+                            />
+                            <Circle className="h-5 w-5 text-destructive" strokeWidth={3} />
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-            {winner && (
-                <CardFooter>
-                    <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
-                </CardFooter>
-            )}
-            {(isDraw && !winner) && (
-                <CardFooter>
-                    <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
-                </CardFooter>
-            )}
-        </Card>
+                    <div className="flex justify-between items-center mb-4 px-2 text-2xl font-bold">
+                        <div className="text-primary">{scores.X}</div>
+                        <div className="text-sm font-medium text-muted-foreground">Score</div>
+                        <div className="text-destructive">{scores.O}</div>
+                    </div>
+                    <CardDescription className="pt-2 text-lg">
+                        <div className="flex h-8 items-center justify-center gap-2">
+                            <span>{status}</span>
+                            {!winner && !isDraw && <div className="animate-pulse">{currentPlayerIcon}</div>}
+                        </div>
+                    </CardDescription>
+
+                    <div className="flex justify-center pt-4">
+                        <div className="grid grid-cols-3 rounded-lg overflow-hidden border">
+                            {board.map((value, i) => (
+                                <Cell
+                                    key={i}
+                                    index={i}
+                                    value={value}
+                                    onClick={() => handleCellClick(i)}
+                                    isWinning={winningLine?.includes(i) ?? false}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </CardContent>
+                {winner && (
+                    <CardFooter>
+                        <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
+                    </CardFooter>
+                )}
+                {(isDraw && !winner) && (
+                    <CardFooter>
+                        <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
+                    </CardFooter>
+                )}
+            </Card>
+        </>
     );
 }
+
+    
