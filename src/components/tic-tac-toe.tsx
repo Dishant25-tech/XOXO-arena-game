@@ -109,8 +109,13 @@ export default function TicTacToeGame() {
     function handleRestart(newRound = false) {
         setBoard(Array(9).fill(null));
         if (newRound) {
-            // Winner starts the next round. If draw, alternate.
-            setIsXNext(lastWinner ? lastWinner === 'X' : !isXNext);
+            if (gameMode === 'pvc') {
+                // Always alternate in Player vs Computer mode
+                setIsXNext(prev => !prev);
+            } else {
+                 // Winner starts the next round in PvP. If draw, alternate.
+                setIsXNext(lastWinner ? lastWinner === 'X' : !isXNext);
+            }
         } else {
             setIsXNext(true);
             setScores({X: 0, O: 0});
@@ -130,7 +135,7 @@ export default function TicTacToeGame() {
         };
 
         const gameRecordsRef = collection(firestore, `users/${user.uid}/game_records`);
-        await addDocumentNonBlocking(gameRecordsRef, gameRecord);
+        addDocumentNonBlocking(gameRecordsRef, gameRecord);
     }
 
     useEffect(() => {
@@ -217,7 +222,8 @@ export default function TicTacToeGame() {
     } else if (isDraw) {
         status = "It's a Draw!";
     } else {
-        status = "Next player:";
+        const nextPlayerName = isXNext ? playerNames.X : playerNames.O;
+        status = `Next: ${nextPlayerName}`;
     }
 
     const currentPlayerIcon = isXNext ? (
@@ -292,6 +298,11 @@ export default function TicTacToeGame() {
                     </div>
                 </div>
             </CardContent>
+            {winner && (
+                <CardFooter>
+                    <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
+                </CardFooter>
+            )}
             {(isDraw && !winner) && (
                 <CardFooter>
                     <Button onClick={() => handleRestart(true)} className="w-full text-lg">Play Again</Button>
