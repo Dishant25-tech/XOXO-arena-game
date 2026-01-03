@@ -4,24 +4,24 @@
  * Core Philosophy:
  * The security model is built on the principle that users have exclusive control over their own
  * data. All user-specific information, including settings and game history, is isolated
- * within a data tree owned by that user. Cross-user data access is strictly forbidden.
+ * within a data tree owned by that user. The public `games` collection allows for real-time
+ * multiplayer matchmaking, with strict rules to ensure only an active player can modify a game state.
  *
  * Data Structure:
- * All user data is nested under the `/users/{userId}` path, where `{userId}` corresponds to the
- * user's Firebase Authentication UID. This hierarchical structure simplifies security by
- * leveraging path-based authorization for all subcollections.
- * - `/users/{userId}`: Stores the user's public profile.
- * - `/users/{userId}/settings`: Contains private, user-specific application settings.
- * - `/users/{userId}/game_records`: A history of games played by the user.
+ * - /users/{userId}: Stores the user's public profile and private subcollections.
+ * - /users/{userId}/settings: Contains private, user-specific application settings.
+ * - /users/{userId}/game_records: A history of games played by the user.
+ * - /games/{gameId}: A live game session, accessible to authenticated users for discovery and play.
  *
  * Key Security Decisions:
  * - User Enumeration Disabled: Listing the top-level `/users` collection is disallowed to protect user privacy.
- * - Self-Service Profile: A user can create their own profile document upon sign-up and manage it thereafter.
- * - Path-Based Access Control: Security for subcollections (`settings`, `game_records`) is determined by the
- *   `{userId}` in the document path, ensuring a user can only access their own data tree.
- * - Relational Integrity: On creation, documents must contain an owner ID field (e.g., 'userId' or 'player1Id')
- *   that matches the `{userId}` in the path, ensuring data consistency and clear ownership. This link is
- *   enforced as immutable on updates.
+ * - Self-Service Profile: A user can create and manage their own profile document.
+ * - Path-Based Access Control: Security for user subcollections (`settings`, `game_records`) is determined
+ *   by the `{userId}` in the path.
+ * - Live Game Access: The `/games` collection is readable by any authenticated user to find an open game.
+ *   However, writing to a game document is strictly controlled.
+ * - Atomic Game Moves: Only the player whose turn it is can update the `board`. Players cannot change
+ *   the game's creator (`player1Id`), join a full game, or alter critical immutable fields.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,71 +31,80 @@ service cloud.firestore {
     // Helper Functions
     // ------------------------------------------------------------------------
 
-    /**
-     * Verifies that the requesting user is signed in.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Verifies that the requesting user's UID matches the provided userId.
-     * This is the foundation of the ownership model.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Verifies ownership for an existing document. Used for safe updates and deletes.
-     * It prevents modifying or deleting documents that do not exist.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
-    /**
-     * Validates that the user document's internal 'id' matches the document's path ID.
-     * Enforces consistency for a user's own profile document.
-     */
+    // -- User Profile Helpers --
     function hasValidUserCreateData(userId) {
       return request.resource.data.id == userId;
     }
 
-    /**
-     * Validates that a user's 'id' field is immutable on update.
-     * Prevents re-assigning the core identifier of a user profile.
-     */
     function hasValidUserUpdateData() {
       return request.resource.data.id == resource.data.id;
     }
 
-    /**
-     * Validates that a new setting document is correctly linked to its parent user path.
-     */
+    // -- User Settings Helpers --
     function hasValidSettingCreateData(userId) {
       return request.resource.data.userId == userId;
     }
 
-    /**
-     * Validates that the ownership link ('userId') on a setting document is immutable.
-     */
     function hasValidSettingUpdateData() {
       return request.resource.data.userId == resource.data.userId;
     }
 
-    /**
-     * Validates that a new game record is correctly linked to the user's path as player 1.
-     */
+    // -- Game Record Helpers --
     function hasValidGameRecordCreateData(userId) {
       return request.resource.data.player1Id == userId;
     }
 
-    /**
-     * Validates that the primary player link ('player1Id') on a game record is immutable.
-     */
     function hasValidGameRecordUpdateData() {
       return request.resource.data.player1Id == resource.data.player1Id;
+    }
+    
+    // -- Live Game Helpers --
+    function isGamePlayer(game) {
+      return isSignedIn() && (request.auth.uid == game.data.player1Id || request.auth.uid == game.data.player2Id);
+    }
+
+    function isNextPlayer(game) {
+      return isSignedIn() && request.auth.uid == game.data.nextPlayer;
+    }
+
+    function hasValidGameCreateData() {
+      let d = request.resource.data;
+      return d.player1Id == request.auth.uid
+        && d.player2Id == null
+        && d.status == 'waiting'
+        && d.nextPlayer == d.player1Id
+        && d.winner == null;
+    }
+    
+    function hasValidGameUpdateData(game) {
+      let before = game.data;
+      let after = request.resource.data;
+      
+      // Immutable fields that can never be changed
+      let areCoreFieldsImmutable = before.player1Id == after.player1Id && before.createdAt == after.createdAt;
+      
+      // Player 2 joining a waiting game
+      let isJoining = before.status == 'waiting' && after.status == 'active'
+        && before.player2Id == null && after.player2Id == request.auth.uid
+        && request.auth.uid != before.player1Id;
+
+      // A player making a move
+      let isMakingMove = isNextPlayer(game) && before.status == 'active' && after.status != 'waiting'
+        && before.board != after.board;
+
+      return areCoreFieldsImmutable && (isJoining || isMakingMove);
     }
 
 
@@ -103,13 +112,6 @@ service cloud.firestore {
     // Collection Rules
     // ------------------------------------------------------------------------
 
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     * @allow (create) A new user can create their own profile document (auth.uid === userId).
-     * @deny (list) An authenticated user cannot list all documents in the `/users` collection.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -117,35 +119,34 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && hasValidUserUpdateData();
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Manages a user's personal settings.
-       * @path /users/{userId}/settings/{settingId}
-       * @allow (create, read, write) A user can manage their own settings documents (auth.uid === userId).
-       * @deny (read, write) A user cannot access another user's settings.
-       * @principle Enforces strict data ownership within a user-specific subcollection.
-       */
       match /settings/{settingId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidSettingCreateData(userId);
         allow update: if isExistingOwner(userId) && hasValidSettingUpdateData();
         allow delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Manages a user's game history.
-       * @path /users/{userId}/game_records/{gameRecordId}
-       * @allow (create, read, write) A user can manage their own game records (auth.uid === userId).
-       * @deny (read, write) A user cannot access another user's game records.
-       * @principle Validates relational integrity by ensuring the 'player1Id' in the document matches the user's path.
-       */
       match /game_records/{gameRecordId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidGameRecordCreateData(userId);
         allow update: if isExistingOwner(userId) && hasValidGameRecordUpdateData();
         allow delete: if isExistingOwner(userId);
       }
+    }
+
+    /**
+     * @description Manages live multiplayer game sessions.
+     * @path /games/{gameId}
+     * @allow (read, list) Any authenticated user can read or list games to find an open match.
+     * @allow (create) An authenticated user can create a new game, becoming player1.
+     * @allow (update) Players can join a waiting game or make a move if it's their turn.
+     * @deny (delete) Games cannot be deleted to preserve history temporarily.
+     */
+    match /games/{gameId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && hasValidGameCreateData();
+        allow update: if isSignedIn() && hasValidGameUpdateData(resource);
+        allow delete: if false;
     }
   }
 }

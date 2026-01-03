@@ -29,7 +29,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GameRecord",
       "type": "object",
-      "description": "Stores the record of a Tic Tac Toe game played between two players or against the computer.",
+      "description": "Stores the historical record of a completed Tic Tac Toe game.",
       "properties": {
         "id": {
           "type": "string",
@@ -37,29 +37,30 @@
         },
         "player1Id": {
           "type": "string",
-          "description": "Reference to User representing player 1. (Relationship: User 1:N GameRecord)"
+          "description": "The user ID of player 1."
         },
         "player2Id": {
           "type": "string",
-          "description": "Reference to User representing player 2. Null if the game was against the computer. (Relationship: User 1:N GameRecord)"
+          "description": "The user ID of player 2. Can be 'computer' or another user's ID."
         },
         "winnerId": {
           "type": "string",
-          "description": "Reference to User who won the game. Null for a draw. (Relationship: User 1:N GameRecord)"
+          "description": "The user ID of the winning player. Null for a draw."
         },
         "moves": {
           "type": "string",
-          "description": "The moves of the game in specific notation."
+          "description": "A serialized representation of the game moves."
         },
         "timestamp": {
           "type": "string",
-          "description": "Timestamp of when the game was played.",
+          "description": "Timestamp of when the game was completed.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "player1Id",
+        "player2Id",
         "moves",
         "timestamp"
       ]
@@ -88,6 +89,60 @@
         "id",
         "username",
         "email"
+      ]
+    },
+    "Game": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Game",
+      "type": "object",
+      "description": "Represents a live, real-time Tic Tac Toe game session between two players.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the game session."
+        },
+        "player1Id": {
+          "type": "string",
+          "description": "The user ID of the player who created the game."
+        },
+        "player2Id": {
+          "type": "string",
+          "description": "The user ID of the player who joined the game. Null if waiting for an opponent."
+        },
+        "board": {
+          "type": "string",
+          "description": "A serialized representation of the 9-cell game board."
+        },
+        "nextPlayer": {
+          "type": "string",
+          "description": "The user ID of the player whose turn it is."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the game.",
+          "enum": [
+            "waiting",
+            "active",
+            "finished"
+          ]
+        },
+        "winner": {
+          "type": "string",
+          "description": "The user ID of the winner, 'draw', or null if the game is ongoing."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp for when the game was created."
+        }
+      },
+      "required": [
+        "id",
+        "player1Id",
+        "board",
+        "nextPlayer",
+        "status",
+        "createdAt"
       ]
     }
   },
@@ -154,8 +209,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/games/{gameId}",
+        "definition": {
+          "entityName": "Game",
+          "schema": {
+            "$ref": "#/backend/entities/Game"
+          },
+          "description": "Stores live game sessions. This collection is publicly readable for game discovery but write access is restricted.",
+          "params": [
+            {
+              "name": "gameId",
+              "description": "Unique ID for the live game session."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the Tic Tac Toe Duel application with a focus on user settings and game records.  The structure leverages path-based ownership for user-specific data like settings and game records. This approach ensures that security rules can be written to easily control access based on the currently logged-in user, achieving Authorization Independence. Denormalization is used where necessary to avoid `get()` calls in the rules.\n\n*   `/users/{userId}/settings/{settingId}`:  This structure stores user-specific settings. The `userId` in the path ensures that only the user can access their own settings.  The `settingId` allows for potentially multiple setting configurations per user if needed, though the schema currently implies only one.\n*   `/users/{userId}/game_records/{gameRecordId}`: This structure stores the records of games played by a specific user.  This organization enables efficient retrieval of a user's game history. The use of `userId` in the path again provides clear ownership.\n\nThis structure supports the required QAPs by:\n\n*   **Secure List Operations:**  Path-based ownership (`/users/{userId}/...`) allows listing operations that are inherently secure, as the rules can simply check if `request.auth.uid == userId`.\n*   **Authorization Independence:** By embedding the user ID in the path itself, we avoid the need to fetch parent documents to determine authorization. All necessary information is available within the document path, greatly simplifying security rules and enabling atomic operations."
+    "reasoning": "The Firestore data structure is designed to support the Tic Tac Toe Duel application with a focus on user settings, game records, and live multiplayer games. The structure leverages path-based ownership for user-specific data like settings and game records. This approach ensures that security rules can be written to easily control access based on the currently logged-in user, achieving Authorization Independence. A new top-level `games` collection is introduced for live multiplayer sessions. This allows any authenticated user to find and join a waiting game, while write access is controlled to ensure only the current players can modify the game state. Denormalization is used where necessary to avoid `get()` calls in the rules.\n\n*   `/users/{userId}/settings/{settingId}`: Stores user-specific settings. The `userId` in the path ensures that only the user can access their own settings.\n*   `/users/{userId}/game_records/{gameRecordId}`: Stores the records of games played by a specific user. This organization enables efficient retrieval of a user's game history.\n*   `/games/{gameId}`: Stores live game sessions. This is a crucial addition for multiplayer functionality. Keeping it at the root level allows for easier querying to find open games. Security rules will ensure that only involved players can make moves.\n\nThis structure supports the required QAPs by:\n\n*   **Secure List Operations:** Path-based ownership (`/users/{userId}/...`) allows listing operations that are inherently secure. The `/games` collection is listable by any authenticated user to find a match, which is a required feature.\n*   **Authorization Independence:** By embedding the user ID in user-specific paths, we avoid fetching parent documents for authorization. For the `/games` collection, authorization logic will rely on the `player1Id` and `player2Id` fields within the document itself, which is necessary for the multiplayer context."
   }
 }
