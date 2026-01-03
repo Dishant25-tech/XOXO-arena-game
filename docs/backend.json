@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "UserSetting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserSetting",
+      "type": "object",
+      "description": "Represents user-specific settings such as theme preferences.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user setting."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N UserSetting)"
+        },
+        "theme": {
+          "type": "string",
+          "description": "The user's preferred theme (e.g., light, dark)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "theme"
+      ]
+    },
+    "GameRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GameRecord",
+      "type": "object",
+      "description": "Stores the record of a Tic Tac Toe game played between two players or against the computer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the game record."
+        },
+        "player1Id": {
+          "type": "string",
+          "description": "Reference to User representing player 1. (Relationship: User 1:N GameRecord)"
+        },
+        "player2Id": {
+          "type": "string",
+          "description": "Reference to User representing player 2. Null if the game was against the computer. (Relationship: User 1:N GameRecord)"
+        },
+        "winnerId": {
+          "type": "string",
+          "description": "Reference to User who won the game. Null for a draw. (Relationship: User 1:N GameRecord)"
+        },
+        "moves": {
+          "type": "string",
+          "description": "The moves of the game in specific notation."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the game was played.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "player1Id",
+        "moves",
+        "timestamp"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Tic Tac Toe Duel application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's username."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. The 'userId' is the Firebase Authentication UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/settings/{settingId}",
+        "definition": {
+          "entityName": "UserSetting",
+          "schema": {
+            "$ref": "#/backend/entities/UserSetting"
+          },
+          "description": "Stores user-specific settings. The `userId` ensures only the user can access their own settings.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "settingId",
+              "description": "Unique ID for the user setting."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/game_records/{gameRecordId}",
+        "definition": {
+          "entityName": "GameRecord",
+          "schema": {
+            "$ref": "#/backend/entities/GameRecord"
+          },
+          "description": "Stores records of games played by the user. Uses path-based ownership for security.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user who played the game."
+            },
+            {
+              "name": "gameRecordId",
+              "description": "Unique ID for the game record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the Tic Tac Toe Duel application with a focus on user settings and game records.  The structure leverages path-based ownership for user-specific data like settings and game records. This approach ensures that security rules can be written to easily control access based on the currently logged-in user, achieving Authorization Independence. Denormalization is used where necessary to avoid `get()` calls in the rules.\n\n*   `/users/{userId}/settings/{settingId}`:  This structure stores user-specific settings. The `userId` in the path ensures that only the user can access their own settings.  The `settingId` allows for potentially multiple setting configurations per user if needed, though the schema currently implies only one.\n*   `/users/{userId}/game_records/{gameRecordId}`: This structure stores the records of games played by a specific user.  This organization enables efficient retrieval of a user's game history. The use of `userId` in the path again provides clear ownership.\n\nThis structure supports the required QAPs by:\n\n*   **Secure List Operations:**  Path-based ownership (`/users/{userId}/...`) allows listing operations that are inherently secure, as the rules can simply check if `request.auth.uid == userId`.\n*   **Authorization Independence:** By embedding the user ID in the path itself, we avoid the need to fetch parent documents to determine authorization. All necessary information is available within the document path, greatly simplifying security rules and enabling atomic operations."
+  }
+}
