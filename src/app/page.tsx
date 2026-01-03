@@ -1,4 +1,8 @@
-import TicTacToeGame from "@/components/tic-tac-toe";
+"use client";
+
+import dynamic from 'next/dynamic';
+
+const TicTacToeGame = dynamic(() => import('@/components/tic-tac-toe'), { ssr: false });
 
 export default function Home() {
   return (
