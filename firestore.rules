@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership security model for a Tic Tac Toe application.
  *
@@ -101,17 +102,15 @@ service cloud.firestore {
         }
 
         // --- State: Player 2 Joining a Game ---
-        let isJoining = before.status == 'waiting' &&
-                        after.status == 'active' &&
-                        before.player2Id == null &&
-                        after.player2Id == request.auth.uid &&
-                        request.auth.uid != before.player1Id &&
-                        // When joining, only player2Id and status should change.
-                        after.board == before.board &&
-                        after.nextPlayer == before.nextPlayer &&
-                        after.winner == before.winner;
+        let isJoining = before.status == 'waiting' && after.status == 'active';
         if (isJoining) {
-          return true;
+          return after.player2Id == request.auth.uid &&
+                 request.auth.uid != before.player1Id &&
+                 before.player2Id == null &&
+                 // When joining, only player2Id and status should change.
+                 after.board == before.board &&
+                 after.nextPlayer == before.nextPlayer &&
+                 after.winner == before.winner;
         }
 
         // --- State: Player Making a Move ---
