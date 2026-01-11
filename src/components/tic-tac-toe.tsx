@@ -478,24 +478,24 @@ export default function TicTacToeGame() {
                         <OnlineGame />
                     ) : (
                         <>
-                            <div className="flex justify-between items-center mb-4 px-2">
-                                <div className="flex items-center gap-2">
-                                    <X className="h-5 w-5 text-primary" strokeWidth={3} />
+                            <div className="flex justify-between items-center mb-4 px-2 gap-4">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <X className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={3} />
                                     <Input 
-                                        className="w-36 h-8"
+                                        className="w-full h-8"
                                         value={playerNames.X} 
                                         onChange={(e) => handleNameChange('X', e.target.value)}
                                         disabled={gameMode === 'pvc'}
                                     />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <Input 
-                                        className="w-36 h-8 text-right"
+                                        className="w-full h-8 text-right"
                                         value={playerNames.O}
                                         onChange={(e) => handleNameChange('O', e.target.value)}
                                         disabled={gameMode === 'pvc'}
                                     />
-                                    <Circle className="h-5 w-5 text-destructive" strokeWidth={3} />
+                                    <Circle className="h-5 w-5 text-destructive flex-shrink-0" strokeWidth={3} />
                                 </div>
                             </div>
                             <div className="flex justify-between items-center mb-4 px-2 text-2xl font-bold">
