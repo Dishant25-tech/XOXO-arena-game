@@ -482,7 +482,7 @@ export default function TicTacToeGame() {
                                 <div className="flex items-center gap-2">
                                     <X className="h-5 w-5 text-primary" strokeWidth={3} />
                                     <Input 
-                                        className="w-32 h-8"
+                                        className="w-36 h-8"
                                         value={playerNames.X} 
                                         onChange={(e) => handleNameChange('X', e.target.value)}
                                         disabled={gameMode === 'pvc'}
@@ -490,7 +490,7 @@ export default function TicTacToeGame() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Input 
-                                        className="w-32 h-8 text-right"
+                                        className="w-36 h-8 text-right"
                                         value={playerNames.O}
                                         onChange={(e) => handleNameChange('O', e.target.value)}
                                         disabled={gameMode === 'pvc'}
