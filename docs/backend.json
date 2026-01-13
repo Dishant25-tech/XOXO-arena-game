@@ -90,60 +90,6 @@
         "username",
         "email"
       ]
-    },
-    "Game": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Game",
-      "type": "object",
-      "description": "Represents a live, real-time Tic Tac Toe game session between two players.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the game session."
-        },
-        "player1Id": {
-          "type": "string",
-          "description": "The user ID of the player who created the game."
-        },
-        "player2Id": {
-          "type": "string",
-          "description": "The user ID of the player who joined the game. Null if waiting for an opponent."
-        },
-        "board": {
-          "type": "string",
-          "description": "A serialized representation of the 9-cell game board."
-        },
-        "nextPlayer": {
-          "type": "string",
-          "description": "The user ID of the player whose turn it is."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the game.",
-          "enum": [
-            "waiting",
-            "active",
-            "finished"
-          ]
-        },
-        "winner": {
-          "type": "string",
-          "description": "The user ID of the winner, 'draw', or null if the game is ongoing."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp for when the game was created."
-        }
-      },
-      "required": [
-        "id",
-        "player1Id",
-        "board",
-        "nextPlayer",
-        "status",
-        "createdAt"
-      ]
     }
   },
   "auth": {
@@ -206,22 +152,6 @@
             {
               "name": "gameRecordId",
               "description": "Unique ID for the game record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/games/{gameId}",
-        "definition": {
-          "entityName": "Game",
-          "schema": {
-            "$ref": "#/backend/entities/Game"
-          },
-          "description": "Stores live game sessions. This collection is publicly readable for game discovery but write access is restricted.",
-          "params": [
-            {
-              "name": "gameId",
-              "description": "Unique ID for the live game session."
             }
           ]
         }

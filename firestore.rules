@@ -71,72 +71,6 @@ service cloud.firestore {
       return request.resource.data.player1Id == resource.data.player1Id;
     }
     
-    // -- Live Game Helpers --
-    function isGamePlayer(game) {
-      return isSignedIn() && (request.auth.uid == game.data.player1Id || request.auth.uid == game.data.player2Id);
-    }
-
-    function isNextPlayer(game) {
-      return isSignedIn() && request.auth.uid == game.data.nextPlayer;
-    }
-
-    function hasValidGameCreateData() {
-      let d = request.resource.data;
-      return d.player1Id == request.auth.uid
-        && d.player2Id == null
-        && d.status == 'waiting'
-        && d.nextPlayer == d.player1Id
-        && d.winner == null;
-    }
-    
-    function hasValidGameUpdateData(game) {
-        let before = game.data;
-        let after = request.resource.data;
-
-        // --- Immutable Fields: These must never change.
-        let areCoreFieldsImmutable = before.player1Id == after.player1Id && before.createdAt == after.createdAt;
-        if (!areCoreFieldsImmutable) {
-            return false;
-        }
-
-        // --- Scenario 1: A second player is joining a waiting game.
-        let isJoining = before.status == 'waiting' && after.status == 'active';
-        if (isJoining) {
-            return after.player2Id == request.auth.uid &&                  // The joining player must be the one making the request.
-                   request.auth.uid != before.player1Id &&                 // A player cannot join their own game.
-                   before.player2Id == null &&                             // The second player slot must be empty.
-                   // Verify that no other fields were maliciously changed during the join operation.
-                   after.board == before.board &&
-                   after.nextPlayer == before.nextPlayer &&
-                   after.winner == before.winner;
-        }
-        
-        // --- Scenario 2: An active player is making a move.
-        let isMakingMove = isNextPlayer(game) &&
-                           before.status == 'active' &&
-                           after.status != 'waiting' && // Status can change to 'active' or 'finished'.
-                           before.board != after.board &&
-                           before.player2Id == after.player2Id; // player2 cannot be changed mid-game.
-        if(isMakingMove) {
-          return true; // The move itself (board, nextPlayer, status, winner) is complex, so we allow it if the basic conditions are met.
-        }
-
-        // --- Scenario 3: A player is forfeiting the game.
-        let isForfeiting = isGamePlayer(game) &&
-                           before.status == 'active' &&
-                           after.status == 'finished' &&
-                           after.winner != request.auth.uid && // The winner cannot be the one who forfeited.
-                           after.winner != 'draw' &&
-                           after.winner != null; // There must be a winner.
-        if (isForfeiting) {
-          return true;
-        }
-
-        // If none of the valid update scenarios match, deny the request.
-        return false;
-    }
-
-
     // ------------------------------------------------------------------------
     // Collection Rules
     // ------------------------------------------------------------------------
@@ -161,21 +95,6 @@ service cloud.firestore {
         allow update: if isExistingOwner(userId) && hasValidGameRecordUpdateData();
         allow delete: if isExistingOwner(userId);
       }
-    }
-
-    /**
-     * @description Manages live multiplayer game sessions.
-     * @path /games/{gameId}
-     * @allow (read, list) Any authenticated user can read or list games to find an open match.
-     * @allow (create) An authenticated user can create a new game, becoming player1.
-     * @allow (update) Players can join a waiting game or make a move if it's their turn.
-     * @deny (delete) Games cannot be deleted to preserve history temporarily.
-     */
-    match /games/{gameId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && hasValidGameCreateData();
-        allow update: if isSignedIn() && hasValidGameUpdateData(resource);
-        allow delete: if false;
     }
   }
 }
