@@ -93,50 +93,46 @@ service cloud.firestore {
         let before = game.data;
         let after = request.resource.data;
 
-        // --- Immutable Fields ---
-        // These fields must never change after creation.
-        let areCoreFieldsImmutable = before.player1Id == after.player1Id &&
-                                    before.createdAt == after.createdAt;
+        // --- Immutable Fields: These must never change.
+        let areCoreFieldsImmutable = before.player1Id == after.player1Id && before.createdAt == after.createdAt;
         if (!areCoreFieldsImmutable) {
-          return false;
+            return false;
         }
 
-        // --- State: Player 2 Joining a Game ---
+        // --- Scenario 1: A second player is joining a waiting game.
         let isJoining = before.status == 'waiting' && after.status == 'active';
         if (isJoining) {
-          return after.player2Id == request.auth.uid &&
-                 request.auth.uid != before.player1Id &&
-                 before.player2Id == null &&
-                 // When joining, only player2Id and status should change.
-                 after.board == before.board &&
-                 after.nextPlayer == before.nextPlayer &&
-                 after.winner == before.winner;
-        }
-
-        // --- State: Player Making a Move ---
-        let isMakingMove = isNextPlayer(game) &&
-                           before.status == 'active' &&
-                           after.status != 'waiting' &&
-                           before.board != after.board &&
-                           // When making a move, player2Id cannot be changed.
-                           before.player2Id == after.player2Id;
-        if (isMakingMove) {
-          return true;
+            return after.player2Id == request.auth.uid &&                  // The joining player must be the one making the request.
+                   request.auth.uid != before.player1Id &&                 // A player cannot join their own game.
+                   before.player2Id == null &&                             // The second player slot must be empty.
+                   // Verify that no other fields were maliciously changed during the join operation.
+                   after.board == before.board &&
+                   after.nextPlayer == before.nextPlayer &&
+                   after.winner == before.winner;
         }
         
-        // --- State: Player Forfeiting ---
-        let isForfeiting = isGamePlayer(game) &&
-                            before.status == 'active' &&
-                            after.status == 'finished' &&
-                            // The winner must be the other player
-                            after.winner != request.auth.uid &&
-                            after.winner != 'draw' &&
-                            after.winner != null;
+        // --- Scenario 2: An active player is making a move.
+        let isMakingMove = isNextPlayer(game) &&
+                           before.status == 'active' &&
+                           after.status != 'waiting' && // Status can change to 'active' or 'finished'.
+                           before.board != after.board &&
+                           before.player2Id == after.player2Id; // player2 cannot be changed mid-game.
+        if(isMakingMove) {
+          return true; // The move itself (board, nextPlayer, status, winner) is complex, so we allow it if the basic conditions are met.
+        }
 
+        // --- Scenario 3: A player is forfeiting the game.
+        let isForfeiting = isGamePlayer(game) &&
+                           before.status == 'active' &&
+                           after.status == 'finished' &&
+                           after.winner != request.auth.uid && // The winner cannot be the one who forfeited.
+                           after.winner != 'draw' &&
+                           after.winner != null; // There must be a winner.
         if (isForfeiting) {
           return true;
         }
 
+        // If none of the valid update scenarios match, deny the request.
         return false;
     }
 
