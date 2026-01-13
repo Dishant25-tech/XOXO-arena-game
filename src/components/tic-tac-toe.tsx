@@ -458,9 +458,9 @@ export default function TicTacToeGame() {
                     <div className="flex justify-center pt-4">
                         <Tabs value={gameMode} onValueChange={handleModeChange} className="w-full">
                             <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="pvp"><User className="mr-2"/> Player vs Player</TabsTrigger>
-                                <TabsTrigger value="pvc"><Bot className="mr-2"/> Player vs Computer</TabsTrigger>
-                                <TabsTrigger value="online"><Globe className="mr-2"/> Online</TabsTrigger>
+                                <TabsTrigger value="pvp"><User className="mr-2 h-4 w-4"/> Player vs Player</TabsTrigger>
+                                <TabsTrigger value="pvc"><Bot className="mr-2 h-4 w-4"/> Player vs Computer</TabsTrigger>
+                                <TabsTrigger value="online"><Globe className="mr-2 h-4 w-4"/> Online</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
