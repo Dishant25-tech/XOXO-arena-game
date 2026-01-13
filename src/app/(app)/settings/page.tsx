@@ -4,9 +4,17 @@ import { useTheme } from "next-themes";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
 
   return (
     <div className="flex flex-col gap-4">
@@ -19,20 +27,28 @@ export default function SettingsPage() {
           <CardDescription>Select your preferred application theme.</CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={theme} onValueChange={setTheme}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="light" id="light" />
-              <Label htmlFor="light">Light</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="dark" id="dark" />
-              <Label htmlFor="dark">Dark</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="system" id="system" />
-              <Label htmlFor="system">System</Label>
-            </div>
-          </RadioGroup>
+          {!isMounted ? (
+             <div className="space-y-2">
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-6 w-24" />
+             </div>
+          ) : (
+            <RadioGroup value={theme} onValueChange={setTheme} className="gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="light" id="light" />
+                <Label htmlFor="light">Light</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dark" id="dark" />
+                <Label htmlFor="dark">Dark</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="system" id="system" />
+                <Label htmlFor="system">System</Label>
+              </div>
+            </RadioGroup>
+          )}
         </CardContent>
       </Card>
     </div>
