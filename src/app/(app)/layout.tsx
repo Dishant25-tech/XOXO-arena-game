@@ -44,7 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarHeader>
             <div className="flex items-center gap-2 p-2">
               <Swords className="w-8 h-8 text-sidebar-primary" />
-              <span className="text-lg font-semibold">Tic Tac Toe Duel</span>
+              <span className="text-lg font-semibold">XOXO Arena</span>
             </div>
           </SidebarHeader>
           <SidebarContent>

@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Tic Tac Toe Duel',
+  title: 'XOXO Arena',
   description: 'A playful game of Tic Tac Toe.',
 };
 

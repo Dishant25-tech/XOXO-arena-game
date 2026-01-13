@@ -454,7 +454,7 @@ export default function TicTacToeGame() {
             </AlertDialog>
             <Card className="w-full max-w-md shadow-2xl shadow-primary/10 border-primary/20">
                 <CardHeader className="text-center pb-2">
-                    <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Tic Tac Toe Duel</CardTitle>
+                    <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">XOXO Arena</CardTitle>
                     <div className="flex justify-center pt-4">
                         <Tabs value={gameMode} onValueChange={handleModeChange} className="w-full">
                             <TabsList className="grid w-full grid-cols-3">
@@ -482,7 +482,7 @@ export default function TicTacToeGame() {
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <X className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={3} />
                                     <Input 
-                                        className="w-full h-8"
+                                        className="w-full h-8 flex-1"
                                         value={playerNames.X} 
                                         onChange={(e) => handleNameChange('X', e.target.value)}
                                         disabled={gameMode === 'pvc'}
@@ -490,7 +490,7 @@ export default function TicTacToeGame() {
                                 </div>
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <Input 
-                                        className="w-full h-8 text-right"
+                                        className="w-full h-8 flex-1 text-right"
                                         value={playerNames.O}
                                         onChange={(e) => handleNameChange('O', e.target.value)}
                                         disabled={gameMode === 'pvc'}
