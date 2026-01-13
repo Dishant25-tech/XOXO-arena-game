@@ -190,11 +190,13 @@ const OnlineGame = () => {
     }
 
     const leaveGame = () => {
-      if(activeGame?.status !== 'finished') {
+      if(activeGame?.status !== 'finished' && user) {
         const gameRef = doc(firestore, 'games', activeGameId!);
+        // When a player forfeits, the other player is the winner.
+        const winnerId = user.uid === activeGame.player1Id ? activeGame.player2Id : activeGame.player1Id;
         updateDocumentNonBlocking(gameRef, {
             status: 'finished',
-            winner: activeGame?.nextPlayer === activeGame?.player1Id ? activeGame?.player2Id : activeGame?.player1Id
+            winner: winnerId
         });
       }
       setActiveGameId(null);
