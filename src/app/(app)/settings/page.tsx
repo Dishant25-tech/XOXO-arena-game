@@ -27,29 +27,36 @@ export default function SettingsPage() {
           <CardDescription>Select your preferred application theme.</CardDescription>
         </CardHeader>
         <CardContent>
-          {!isMounted ? (
-             <div className="space-y-2">
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="h-6 w-24" />
-             </div>
-          ) : (
-            <RadioGroup value={theme} onValueChange={setTheme} className="gap-4">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="light" id="light" />
-                <Label htmlFor="light">Light</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dark" id="dark" />
-                <Label htmlFor="dark">Dark</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="system" id="system" />
-                <Label htmlFor="system">System</Label>
-              </div>
-            </RadioGroup>
-          )}
-        </CardContent>
+  {!isMounted ? (
+    <div className="space-y-2">
+      <Skeleton className="h-6 w-24" />
+      <Skeleton className="h-6 w-24" />
+      <Skeleton className="h-6 w-24" />
+    </div>
+  ) : (
+    <RadioGroup
+      value={theme}
+      onValueChange={setTheme}
+      className="gap-4"
+    >
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="light" id="light" />
+        <Label htmlFor="light">Light</Label>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="dark" id="dark" />
+        <Label htmlFor="dark">Dark</Label>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <RadioGroupItem value="system" id="system" />
+        <Label htmlFor="system">System</Label>
+      </div>
+    </RadioGroup>
+  )}
+</CardContent>
+
       </Card>
     </div>
   );
