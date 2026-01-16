@@ -1,24 +1,25 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
+// This pattern prevents re-initialization on both server and client.
+const firebaseApp: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  // The initializeApp function is idempotent. It will create the app on the first call
-  // and return the existing instance on subsequent calls. We call it directly to ensure
-  // that we are always working with an app that has been initialized with our configuration.
-  const firebaseApp = initializeApp(firebaseConfig);
+  // The initializeApp function is now called at the module level above.
+  // This function simply returns the SDKs for the initialized app.
   return getSdks(firebaseApp);
 }
 
-export function getSdks(firebaseApp: FirebaseApp) {
+export function getSdks(app: FirebaseApp) {
   return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firebaseApp: app,
+    auth: getAuth(app),
+    firestore: getFirestore(app)
   };
 }
 
