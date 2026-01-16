@@ -1,5 +1,7 @@
 'use client';
 import { getAuth, type User } from 'firebase/auth';
+import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 type SecurityRuleContext = {
   path: string;
@@ -33,6 +35,20 @@ interface SecurityRuleRequest {
     data: any;
   };
 }
+
+/**
+ * Ensures that a Firebase app is initialized and returns it.
+ * This is critical for modules that might be loaded before the main
+ * Firebase initialization in a provider.
+ * @returns The initialized FirebaseApp instance.
+ */
+function getInitializedApp(): FirebaseApp {
+  if (getApps().length > 0) {
+    return getApp();
+  }
+  return initializeApp(firebaseConfig);
+}
+
 
 /**
  * Builds a security-rule-compliant auth object from the Firebase User.
@@ -78,7 +94,8 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
     // Safely attempt to get the current user.
-    const firebaseAuth = getAuth();
+    const app = getInitializedApp();
+    const firebaseAuth = getAuth(app);
     const currentUser = firebaseAuth.currentUser;
     if (currentUser) {
       authObject = buildAuthObject(currentUser);
