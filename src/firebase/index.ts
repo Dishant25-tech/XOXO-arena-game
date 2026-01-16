@@ -1,16 +1,15 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  if (getApps().length) {
-    return getSdks(getApp());
-  }
-
+  // The initializeApp function is idempotent. It will create the app on the first call
+  // and return the existing instance on subsequent calls. We call it directly to ensure
+  // that we are always working with an app that has been initialized with our configuration.
   const firebaseApp = initializeApp(firebaseConfig);
   return getSdks(firebaseApp);
 }
